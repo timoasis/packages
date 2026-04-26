@@ -1,0 +1,52 @@
+import json
+from pyvis.network import Network
+
+def visualize_langextract_graph(jsonl_path, output_filename="graph_output.html"):
+    # Initialize the interactive network
+    # We use a dark theme and directed arrows for better clarity
+    net = Network(height="750px", width="100%", bgcolor="#222222", font_color="white", directed=True)
+    
+    # Physics makes the graph "bounce" and organize itself naturally
+    net.force_atlas_2based()
+
+    with open(jsonl_path, 'r') as f:
+        for line in f:
+            if not line.strip():
+                continue
+            
+            data = json.loads(line)
+            
+            # Filter for Relationship extractions
+            if data.get('extraction_class') == 'Relationship':
+                attrs = data.get('attributes', {})
+                
+                # Extract the relationship name from the actual text found by model
+                # Defaults to "Related To" if extraction_text is missing
+                edge_label = data.get('extraction_text', 'Related To')
+                
+                # Format Node Labels: "Entity Name\n[Type]"
+                sub_name = attrs.get('subject', 'Unknown')
+                sub_type = attrs.get('subject_type', 'Entity')
+                sub_label = f"{sub_name}\n[{sub_type}]"
+                
+                obj_name = attrs.get('object', 'Unknown')
+                obj_type = attrs.get('object_type', 'Entity')
+                obj_label = f"{obj_name}\n[{obj_type}]"
+                
+                # Add Nodes
+                # title provides a hover-over tooltip
+                net.add_node(sub_label, label=sub_label, title=f"Type: {sub_type}", color="#3db5ff")
+                net.add_node(obj_label, label=obj_label, title=f"Type: {obj_type}", color="#3db5ff")
+                
+                # Add Edge (The Relationship)
+                net.add_edge(sub_label, obj_label, label=edge_label, color="#aaaaaa")
+
+    # Save and open the visualization
+    net.show_buttons(filter_=['physics']) # Allows you to tweak gravity/spacing in-browser
+    net.save_graph(output_filename)
+    print(f"Graph generated successfully: {output_filename}")
+
+# Run the function
+if __name__ == "__main__":
+    # Replace 'extractions.jsonl' with your actual file path
+    visualize_langextract_graph('extractions.jsonl')
